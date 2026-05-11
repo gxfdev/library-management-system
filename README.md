@@ -970,6 +970,20 @@ SOFTWARE.
 
 ---
 
+## ☕ 打赏支持
+
+如果这个项目对你有帮助，欢迎请作者喝杯咖啡☕️！你的支持是我持续开发的动力！
+
+<p align="center">
+  <img src="docs/images/wechat-pay.png" alt="微信支付" width="300"/>
+</p>
+
+<p align="center">
+  <b>微信支付</b> - 扫码打赏（推荐）
+</p>
+
+---
+
 ## 📮 联系我们
 
 | 方式 | 信息 |
