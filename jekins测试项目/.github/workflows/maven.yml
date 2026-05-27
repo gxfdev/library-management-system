@@ -12,21 +12,6 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: library_db_test
-          MYSQL_CHARSET: utf8mb4
-          MYSQL_COLLATION: utf8mb4_unicode_ci
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-
       redis:
         image: redis:7-alpine
         ports:
@@ -48,33 +33,11 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
-    - name: Wait for MySQL
-      run: |
-        for i in {1..30}; do
-          if mysqladmin ping -h "127.0.0.1" --silent 2>/dev/null; then
-            echo "MySQL is ready!"
-            break
-          fi
-          echo "Waiting for MySQL... ($i/30)"
-          sleep 2
-        done
-
-    - name: Initialize database
-      env:
-        MYSQL_PWD: root
-      run: |
-        sed 's/library_db/library_db_test/g' backend/sql/init.sql | mysql -h 127.0.0.1 -u root
-        sed 's/library_db/library_db_test/g' backend/sql/migration_v2.sql | mysql -h 127.0.0.1 -u root
-        echo "Database initialized!"
-
     - name: Run tests with Maven
       working-directory: backend
       run: |
         mvn -B test \
           -Dspring.profiles.active=test \
-          -Dspring.datasource.url=jdbc:mysql://127.0.0.1:3306/library_db_test?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true \
-          -Dspring.datasource.username=root \
-          -Dspring.datasource.password=root \
           -Dspring.data.redis.host=127.0.0.1 \
           -Dspring.data.redis.port=6379
 
