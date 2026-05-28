@@ -30,7 +30,7 @@ class AuthControllerTest {
         request.setUsername("admin");
         request.setPassword("admin123");
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -45,11 +45,11 @@ class AuthControllerTest {
         request.setUsername("admin");
         request.setPassword("wrongpassword");
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(500));
+                .andExpect(jsonPath("$.code").value(400));
     }
 
     @Test
@@ -58,7 +58,7 @@ class AuthControllerTest {
         request.setUsername("");
         request.setPassword("admin123");
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());

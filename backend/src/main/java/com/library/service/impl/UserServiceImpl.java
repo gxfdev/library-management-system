@@ -224,14 +224,17 @@ public class UserServiceImpl implements UserService {
     }
 
     private String generateRandomPassword() {
-        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        String upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        String lower = "abcdefghjkmnpqrstuvwxyz";
+        String digits = "23456789";
+        String all = upper + lower + digits;
         StringBuilder sb = new StringBuilder();
         java.util.Random random = new java.util.Random();
-        sb.append(chars.charAt(random.nextInt(26)));
-        sb.append(chars.charAt(26 + random.nextInt(26)));
-        sb.append(chars.charAt(52 + random.nextInt(8)));
+        sb.append(upper.charAt(random.nextInt(upper.length())));
+        sb.append(lower.charAt(random.nextInt(lower.length())));
+        sb.append(digits.charAt(random.nextInt(digits.length())));
         for (int i = 3; i < 8; i++) {
-            sb.append(chars.charAt(random.nextInt(chars.length())));
+            sb.append(all.charAt(random.nextInt(all.length())));
         }
         return sb.toString();
     }
