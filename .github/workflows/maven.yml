@@ -1,3 +1,7 @@
+permissions:
+  contents: read
+  security-events: write
+
 name: Java CI with Maven
 
 on:
