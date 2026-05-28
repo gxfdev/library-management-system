@@ -114,6 +114,32 @@ function handleUnauthorized(message?: string) {
   }, 1500)
 }
 
+export function getSecureToken(): string | null {
+  const token = localStorage.getItem('token')
+  if (!token) return null
+  try {
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+    const payload = JSON.parse(atob(parts[1] || '{}'))
+    const exp = payload.exp
+    if (exp && exp * 1000 < Date.now()) {
+      clearAuthData()
+      return null
+    }
+  } catch {}
+  return token
+}
+
+export function setSecureToken(token: string): void {
+  localStorage.setItem('token', token)
+}
+
+export function clearAuthData(): void {
+  localStorage.removeItem('token')
+  localStorage.removeItem('userInfo')
+  sessionStorage.clear()
+}
+
 export function sanitizeInput(str: string): string {
   if (!str) return str
   return str.replace(/[<>'"&\\]/g, (char) => ({
