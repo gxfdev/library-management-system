@@ -1,7 +1,3 @@
-permissions:
-  contents: read
-  security-events: write
-
 name: Java CI with Maven
 
 on:
@@ -14,10 +10,6 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      security-events: write
 
     steps:
     - uses: actions/checkout@v4
@@ -45,9 +37,3 @@ jobs:
         name: test-results
         path: backend/target/surefire-reports/
         retention-days: 30
-
-    - name: Update dependency graph
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
-      uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
-      with:
-        directory: backend
