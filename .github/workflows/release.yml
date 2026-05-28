@@ -55,68 +55,75 @@ jobs:
         zip -r "${DIST_NAME}.zip" "$DIST_NAME"
         echo "ZIP_FILE=${DIST_NAME}.zip" >> $GITHUB_ENV
 
-    - name: Upload Release Asset
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ github.ref_name }}
-        name: Library Management System ${{ steps.get_version.outputs.VERSION }}
-        body: |
-          ## 📦 图书馆管理系统 v${{ steps.get_version.outputs.VERSION }}
+    - name: Delete existing Release if exists
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG="${{ github.ref_name }}"
+        if gh release view "$TAG" &>/dev/null; then
+          echo "Deleting existing release for tag $TAG"
+          gh release delete "$TAG" --yes --cleanup-tag || true
+        fi
 
-          ### 🚀 快速部署（推荐 Docker）
+    - name: Create GitHub Release with Assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        gh release create "${{ github.ref_name }}" \
+          "${ZIP_FILE}" \
+          --title "Library Management System v${VERSION}" \
+          --notes "## 📦 图书馆管理系统 v${VERSION}
 
-          ```bash
-          # 下载 ZIP 并解压
-          unzip library-management-system-${{ steps.get_version.outputs.VERSION }}.zip
-          cd library-management-system-${{ steps.get_version.outputs.VERSION }}
+        ### 🚀 快速部署（推荐 Docker）
 
-          # 配置环境变量
-          cp .env.example .env
-          nano .env   # 修改数据库密码和JWT密钥
+        \`\`\`bash
+        # 下载 ZIP 并解压
+        unzip library-management-system-v${VERSION}.zip
+        cd library-management-system-v${VERSION}
 
-          # 一键启动全部服务
-          docker compose up -d
-          ```
+        # 配置环境变量
+        cp .env.example .env
+        nano .env   # 修改数据库密码和JWT密钥
 
-          ### 📋 手动部署
+        # 一键启动全部服务
+        docker compose up -d
+        \`\`\`
 
-          **后端（需要 JDK 17+、MySQL 8+）：**
-          ```bash
-          java -jar library-backend.jar --spring.profiles.active=prod
-          ```
+        ### 📋 手动部署
 
-          **前端（Nginx 部署）：**
-          ```bash
-          cp -r frontend-dist /usr/share/nginx/html/
-          ```
+        **后端（需要 JDK 17+、MySQL 8+）：**
+        \`\`\`bash
+        java -jar library-backend.jar --spring.profiles.active=prod
+        \`\`\`
 
-          ### 🔧 环境变量说明（.env 文件）
+        **前端（Nginx 部署）：**
+        \`\`\`bash
+        cp -r frontend-dist /usr/share/nginx/html/
+        \`\`\`
 
-          | 变量名 | 说明 | 默认值 |
-          |--------|------|--------|
-          | MYSQL_ROOT_PASSWORD | MySQL root 密码 | changeme |
-          | MYSQL_DB | 数据库名称 | library_db |
-          | JWT_SECRET | JWT 密钥（生产环境必须改！） | changeThisToASecureRandomStringInProduction2024 |
-          | BACKEND_PORT | 后端端口 | 8080 |
-          | FRONTEND_PORT | 前端端口 | 80 |
+        ### 🔧 环境变量说明（.env 文件）
 
-          ### 🔗 访问地址
+        | 变量名 | 说明 | 默认值 |
+        |--------|------|--------|
+        | MYSQL_ROOT_PASSWORD | MySQL root 密码 | changeme |
+        | MYSQL_DB | 数据库名称 | library_db |
+        | JWT_SECRET | JWT 密钥（生产环境必须改！） | changeThisToASecureRandomStringInProduction2024 |
+        | BACKEND_PORT | 后端端口 | 8080 |
+        | FRONTEND_PORT | 前端端口 | 80 |
 
-          - 前端：`http://你的服务器IP`
-          - 后端 API：`http://你的服务器IP:8080/api`
-          - Swagger 文档：`http://你的服务器IP:8080/api/doc.html`
-          - 默认账号：**admin / admin123**
+        ### 🔗 访问地址
 
-          ### 📝 一键部署脚本
+        - 前端：\`http://你的服务器IP\`
+        - 后端 API：\`http://你的服务器IP:8080/api\`
+        - Swagger 文档：\`http://你的服务器IP:8080/api/doc.html\`
+        - 默认账号：**admin / admin123**
 
-          在 Linux 服务器上执行以下命令即可自动完成安装：
+        ### 📝 一键部署脚本
 
-          ```bash
-          wget https://raw.githubusercontent.com/gxfdev/library-management-system/main/deploy.sh
-          chmod +x deploy.sh
-          ./deploy.sh latest install
-          ```
-        draft: false
-        prerelease: false
-        files: |
-          ${{ env.ZIP_FILE }}
+        在 Linux 服务器上执行：
+        \`\`\`bash
+        wget https://raw.githubusercontent.com/gxfdev/library-management-system/main/deploy.sh
+        chmod +x deploy.sh
+        ./deploy.sh latest install
+        \`\`\`"
