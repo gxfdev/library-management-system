@@ -1,0 +1,65 @@
+# ===========================================
+# Docker 构建忽略文件
+# 优化镜像大小和构建速度
+# ===========================================
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Maven/Gradle 构建输出
+target/
+*.jar
+*.war
+*.class
+
+# 测试文件
+src/test/
+test/
+
+# 文档
+*.md
+docs/
+README*
+LICENSE*
+
+# 环境变量 (敏感信息)
+.env
+.env.*
+!.env.example
+
+# 日志
+logs/
+*.log
+
+# 上传文件 (运行时生成)
+uploads/
+uploads/*
+
+# SQL 初始化文件 (已包含在 docker-compose volume)
+sql/*.sql
+
+# Docker 相关 (避免递归)
+docker-compose*.yml
+Dockerfile*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时文件
+*.tmp
+*.temp
+*.bak
+*~
+
+# Node.js (如果有前端资源)
+node_modules/

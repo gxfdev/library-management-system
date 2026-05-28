@@ -1,0 +1,47 @@
+# ===========================================
+# 前端 Docker 构建忽略文件
+# ===========================================
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 测试
+coverage/
+.nyc_output/
+
+# 文档
+*.md
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时文件
+*.tmp
+*.temp
+*~
+
+# Vite 缓存 (构建时重新生成)
+dist/
+.vite/

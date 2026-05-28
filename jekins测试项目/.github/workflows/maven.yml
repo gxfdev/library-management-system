@@ -1,4 +1,4 @@
-name: Java CI/CD with Maven
+name: Java CI with Maven
 
 on:
   push:
@@ -7,24 +7,12 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  build:
 
     runs-on: ubuntu-latest
 
-    services:
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -35,11 +23,7 @@ jobs:
 
     - name: Run tests with Maven
       working-directory: backend
-      run: |
-        mvn -B test \
-          -Dspring.profiles.active=test \
-          -Dspring.data.redis.host=127.0.0.1 \
-          -Dspring.data.redis.port=6379
+      run: mvn -B test -Dspring.profiles.active=test
 
     - name: Build package
       working-directory: backend

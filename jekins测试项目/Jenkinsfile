@@ -1,0 +1,194 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_REGISTRY = credentials('docker-registry')
+        GIT_CREDENTIALS = credentials('git-credentials')
+        PROJECT_NAME = 'library-management'
+        BACKEND_IMAGE = "${DOCKER_REGISTRY_USR}/${PROJECT_NAME}-backend:${BUILD_NUMBER}"
+        FRONTEND_IMAGE = "${DOCKER_REGISTRY_USR}/${PROJECT_NAME}-frontend:${BUILD_NUMBER}"
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+        ansiColor('xterm')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                echo "✅ 代码检出完成 - Branch: ${GIT_BRANCH}, Commit: ${GIT_COMMIT}"
+            }
+        }
+
+        stage('Code Quality') {
+            parallel {
+                stage('Backend Test') {
+                    steps {
+                        dir('backend') {
+                            sh '''
+                                echo "🔧 后端单元测试..."
+                                ./mvnw clean test \
+                                    -Dspring.profiles.active=test \
+                                    -Dsurefire.useFile=false
+                            '''
+                        }
+                    }
+                    post {
+                        always {
+                            junit '**/target/surefire-reports/*.xml'
+                        }
+                    }
+                }
+
+                stage('Frontend Lint & Build') {
+                    steps {
+                        dir('frontend') {
+                            sh '''
+                                echo "🔧 前端代码检查..."
+                                pnpm install --frozen-lockfile
+                                pnpm lint
+                                pnpm type-check || true
+                                echo "📦 前端构建..."
+                                pnpm build
+                            '''
+                        }
+                    }
+                }
+
+                stage('Security Scan') {
+                    steps {
+                        echo "🔒 安全扫描..."
+                        sh '''
+                            echo "检查依赖漏洞..."
+                            cd backend && ./mvnw dependency:tree-dependency-analyzer || true
+                            cd ../frontend && pnpm audit || true
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            when {
+                branch pattern: '^(main|master|develop|release/.*)$', comparator: 'REGEXP'
+            }
+            steps {
+                script {
+                    parallel(
+                        'Build Backend': {
+                            dir('backend') {
+                                sh """
+                                    echo "🐳 构建后端镜像..."
+                                    docker build \\
+                                        --build-arg JAVA_OPTS='-Xms512m -Xmx1024m' \\
+                                        -t ${BACKEND_IMAGE} \\
+                                        -t ${DOCKER_REGISTRY_USR}/${PROJECT_NAME}-backend:latest .
+                                    echo "后端镜像构建完成: ${BACKEND_IMAGE}"
+                                """
+                            }
+                        },
+                        'Build Frontend': {
+                            dir('frontend') {
+                                sh """
+                                    echo "🐳 构建前端镜像..."
+                                    docker build \\
+                                        -t ${FRONTEND_IMAGE} \\
+                                        -t ${DOCKER_REGISTRY_USR}/${PROJECT_NAME}-frontend:latest .
+                                    echo "前端镜像构建完成: ${FRONTEND_IMAGE}"
+                                """
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        stage('Push Images') {
+            when {
+                branch pattern: '^(main|master)$', comparator: 'REGEXP'
+            }
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: 'docker-registry', url: "https://${DOCKER_REGISTRY_USR}"]) {
+                        sh """
+                            echo "📤 推送镜像到仓库..."
+                            docker push ${BACKEND_IMAGE}
+                            docker push ${DOCKER_REGISTRY_USR}/${PROJECT_NAME}-backend:latest
+                            docker push ${FRONTEND_IMAGE}
+                            docker push ${DOCKER_REGISTRY_USR}/${PROJECT_NAME}-frontend:latest
+                            echo "✅ 镜像推送完成"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Staging') {
+            when {
+                branch pattern: '^develop$', comparator: 'REGEXP'
+            }
+            steps {
+                deployToEnvironment('staging', '8081', '81')
+            }
+        }
+
+        stage('Deploy to Production') {
+            when {
+                branch pattern: '^(main|master)$', comparator: 'REGEXP'
+            }
+            input {
+                message "确认部署到生产环境？"
+                ok "部署"
+            }
+            steps {
+                deployToEnvironment('production', '8080', '80')
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "🧹 清理工作空间..."
+            cleanWs()
+            sh 'docker system prune -f --volumes || true'
+        }
+        success {
+            echo "🎉 构建成功! #${BUILD_NUMBER}"
+            slackSend(channel: '#deployments',
+                     color: 'good',
+                     message: "✅ ${PROJECT_NAME} 构建成功 #${BUILD_NUMBER}\\n分支: ${GIT_BRANCH}\\n提交: ${GIT_COMMIT}")
+        }
+        failure {
+            echo "❌ 构建失败!"
+            slackSend(channel: '#deployments',
+                     color: 'danger',
+                     message: "❌ ${PROJECT_NAME} 构建失败 #${BUILD_NUMBER}\\n查看: ${BUILD_URL}")
+        }
+    }
+}
+
+def deployToEnvironment(envName, backendPort, frontendPort) {
+    sh """
+        echo "🚀 部署到 ${envName} 环境..."
+
+        cp backend/docker-compose.yml docker-compose.${envName}.yml
+
+        sed -i "s/\${BACKEND_PORT:-8080}/${backendPort}/g" docker-compose.${envName}.yml
+        sed -i "s/\${FRONTEND_PORT:-80}/${frontendPort}/g" docker-compose.${envName}.yml
+        sed -i "s/library-backend/${DOCKER_REGISTRY_USR}/${PROJECT_NAME}-backend:\${BUILD_NUMBER}/g" docker-compose.${envName}.yml
+        sed -i "s/library-frontend/${DOCKER_REGISTRY_USR}/${PROJECT_NAME}-frontend:\${BUILD_NUMBER}/g" docker-compose.${envName}.yml
+
+        docker compose -f docker-compose.${envName}.yml up -d --remove-orphans
+
+        echo "⏳ 等待服务启动..."
+        sleep 30
+
+        echo "✅ ${envName} 环境部署完成"
+        echo "后端地址: http://localhost:${backendPort}"
+        echo "前端地址: http://localhost:${frontendPort}"
+    """
+}

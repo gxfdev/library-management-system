@@ -1,0 +1,132 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+      force-response: true
+
+spring:
+  application:
+    name: library-management
+
+  profiles:
+    active: dev
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    default-property-inclusion: non_null
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.library.entity
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+jwt:
+  secret: ${JWT_SECRET:}
+  expiration: ${JWT_EXPIRATION:3600000}
+  header: Authorization
+  prefix: "Bearer "
+
+login:
+  rate-limit:
+    max-attempts: 5
+    window-seconds: 300
+
+security:
+  request:
+    timestamp-tolerance: ${REQUEST_TIMESTAMP_TOLERANCE:300000}
+    nonce-cache-size: ${REQUEST_NONCE_CACHE_SIZE:10000}
+  encryption:
+    aes-key: ${AES_ENCRYPTION_KEY:}
+  password-policy:
+    min-length: 8
+    require-uppercase: true
+    require-lowercase: true
+    require-digit: true
+    require-special: false
+  rate-limit:
+    api-max-requests: ${API_RATE_LIMIT:100}
+    api-window-seconds: 60
+
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:5174}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
+    path: /swagger-ui.html
+
+knife4j:
+  enable: ${SWAGGER_ENABLED:false}
+  setting:
+    language: zh_cn
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: never
+    info:
+      enabled: true
+    metrics:
+      enabled: false
+    prometheus:
+      enabled: false
+  metrics:
+    export:
+      prometheus:
+        enabled: false
+    tags:
+      application: ${spring.application.name}
+  server:
+    port: ${ACTUATOR_PORT:-1}
+
+alert:
+  enabled: false
+  error-threshold: 10
+  email:
+    enabled: false
+  webhook:
+    url: ""
+
+logging:
+  level:
+    com.library: ${LOG_LEVEL:warn}
+    com.library.mapper: ${LOG_LEVEL:warn}
+    org.springframework.security: ${SECURITY_LOG_LEVEL:warn}

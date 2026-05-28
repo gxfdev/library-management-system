@@ -1,0 +1,34 @@
+# Frontend
+frontend/node_modules/
+node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+
+# Backend
+backend/target/
+backend/*.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment
+.env
+backend/.env
+
+# Logs
+*.log
+logs/
+
+# Runtime
+*.pid
+*.seed
