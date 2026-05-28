@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Build Backend JAR
+      working-directory: backend
+      run: mvn -B package -DskipTests -Dmaven.javadoc.skip=true
+
+    - name: Build Frontend
+      working-directory: frontend
+      run: |
+        npm install
+        npm run build
+
+    - name: Get version from tag
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Package distribution
+      run: |
+        mkdir -p release/library-management-system-${{ steps.get_version.outputs.VERSION }}
+        cp backend/target/library-backend.jar release/library-management-system-${{ steps.get_version.outputs.VERSION }}/
+        cp -r frontend/dist release/library-management-system-${{ steps.get_version.outputs.VERSION }}/frontend-dist
+        cp backend/Dockerfile release/library-management-system-${{ steps.get_version.outputs.VERSION }}/
+        cp backend/docker-compose.yml release/library-management-system-${{ steps.get_version.outputs.VERSION }}/
+        cp backend/nginx.conf release/library-management-system-${{ steps.get_version.outputs.VERSION }}/
+        cp backend/.env.example release/library-management-system-${{ steps.get_version.outputs.VERSION }}/
+
+    - name: Create ZIP archive
+      working-directory: release
+      run: zip -r ../library-management-system-${{ steps.get_version.outputs.VERSION }}.zip library-management-system-${{ steps.get_version.outputs.VERSION }}/
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Library Management System ${{ steps.get_version.outputs.VERSION }}
+        body: |
+          ## 📦 图书馆管理系统 v${{ steps.get_version.outputs.VERSION }}
+
+          ### 🚀 快速部署（推荐 Docker）
+
+          ```bash
+          # 下载并解压
+          unzip library-management-system-${{ steps.get_version.outputs.VERSION }}.zip
+          cd library-management-system-${{ steps.get_version.outputs.VERSION }}
+
+          # 复制环境变量文件并修改
+          cp .env.example .env
+          # 编辑 .env 文件，修改数据库密码和JWT密钥
+
+          # 一键启动（MySQL + 后端 + 前端）
+          docker-compose up -d
+          ```
+
+          ### 📋 手动部署
+
+          **后端：**
+          ```bash
+          # 需要 JDK 17+、MySQL 8+
+          java -jar library-backend.jar --spring.profiles.active=prod
+          ```
+
+          **前端：**
+          ```bash
+          # 将 frontend-dist 目录部署到 Nginx 的 html 目录下
+          # 配置 Nginx 反向代理到后端 8080 端口
+          ```
+
+          ### 🔧 环境变量说明
+
+          | 变量名 | 说明 | 默认值 |
+          |--------|------|--------|
+          | MYSQL_ROOT_PASSWORD | MySQL root 密码 | changeme |
+          | MYSQL_DB | 数据库名称 | library_db |
+          | JWT_SECRET | JWT 密钥（生产环境必须修改） | changeThisToASecureRandomStringInProduction2024 |
+          | BACKEND_PORT | 后端端口 | 8080 |
+          | FRONTEND_PORT | 前端端口 | 80 |
+
+          ### 📝 更新日志
+
+          完整更新日志请查看 [CHANGELOG.md](https://github.com/gxfdev/library-management-system/blob/main/CHANGELOG.md)
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        files: |
+          library-management-system-${{ steps.get_version.outputs.VERSION }}.zip
