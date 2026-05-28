@@ -21,12 +21,20 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
+    - name: Prepare project directory
+      run: |
+        if [ -d "jekins测试项目/backend" ]; then
+          cp -r "jekins测试项目/backend" ./backend-src
+        else
+          cp -r "backend" ./backend-src
+        fi
+
     - name: Run tests with Maven
-      working-directory: "jekins测试项目/backend"
+      working-directory: backend-src
       run: mvn -B test -Dspring.profiles.active=test
 
     - name: Build package
-      working-directory: "jekins测试项目/backend"
+      working-directory: backend-src
       if: success()
       run: mvn -B package -DskipTests -Dmaven.javadoc.skip=true
 
@@ -35,11 +43,11 @@ jobs:
       if: always()
       with:
         name: test-results
-        path: "jekins测试项目/backend/target/surefire-reports/"
+        path: backend-src/target/surefire-reports/
         retention-days: 30
 
     - name: Update dependency graph
       if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
       uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
       with:
-        directory: "jekins测试项目/backend"
+        directory: backend-src
